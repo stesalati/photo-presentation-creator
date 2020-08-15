@@ -16,23 +16,35 @@ def natural_keys(text):
 def main(argv):
     # Valori default
     input_folder = "."
-    output_filename = "presentazione"
+    output_filename = "presentation"
     title = ""
     subtitle = ""
-    show_photos = False
+    author = ""
+    grid_only = False
     R = -1
     C = -1
     white_background = False
     
     # Interpretazione linea di comando
     try:
-        opts, args = getopt.getopt(argv,"hi:o:t:s:pr:c:w",["input_folder=", "output_filename=", "title=", "subtitle=", "show_photos=", "R=", "C=", "white="])
+        opts, args = getopt.getopt(argv,"hi:o:t:s:a:gr:c:w",["input_folder=", "output_filename=", "title=", "subtitle=", "author=", "grid_only=", "R=", "C=", "white="])
     except getopt.GetoptError:
-        print("Messaggio errore")
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print("Messaggio help")
+            print("Create a nice PDF portfolio presentation with the images contained in the folder specified.")
+            print("Usage: python3 crea [-i folder] [-o file] ...")
+            print("Options and arguments:")
+            print("-i folder  \t: The folder where the images are. Images are processed in alphabetical order. Default: current folder.")
+            print("-o filename\t: Name of the output presentation to be created (extension is not required) in the image folder. Default: \"Presentation\".")
+            print("-t text    \t: Title to be shown on the cover page, if not specified, no cover is created. Default: empty.")
+            print("-s text    \t: Subtitle to be shown on the cover page. Default: empty.")
+            print("-a text    \t: Author name to be shown on the cover page. Default: empty.")
+            print("-g         \t: Create only the grid page. Default: not active.")
+            print("-r number  \t: Number of rows in the grid view. If not specified, it will be calculated.")
+            print("-c number  \t: Number of columns in the grid view. If not specified, it will be calculated.")
+            print("-w         \t: Create a presentation with white background instead of the default black.")
+            print("-h         \t: Show this help.")
             sys.exit()
         elif opt in ("-i", "--input_folder"):
             input_folder = arg
@@ -42,12 +54,22 @@ def main(argv):
             title = arg
         elif opt in ("-s", "--subtitle"):
             subtitle = arg
-        elif opt in ("-p", "--show_photos"):
-            show_photos = True
+        elif opt in ("-a", "--author"):
+            author = arg
+        elif opt in ("-g", "--grid_only"):
+            grid_only = True
         elif opt in ("-r", "--rows"):
-            R = int(arg)
+            try:
+                R = int(arg)
+            except:
+                print("Number of rows must be a number.")
+                exit(-1)
         elif opt in ("-c", "--columns"):
-            C = int(arg)
+            try:
+                C = int(arg)
+            except:
+                print("Number of columns must be a number.")
+                exit(-1)
         elif opt in ("-w", "--white_background"):
             white_background = True
     
@@ -92,10 +114,10 @@ def main(argv):
         pdf.cell(0, 0, subtitle, 0, 1, align="C", fill=False)
         pdf.set_y(H*9/10)
         pdf.set_font_size(12)
-        pdf.cell(0, 0, "Stefano Salati", 0, 1, align="C", fill=False)
+        pdf.cell(0, 0, author, 0, 1, align="C", fill=False)
 
     #Aggiungi immagini
-    if show_photos:
+    if not grid_only:
         pdf.set_font_size(12)
         for i, image in enumerate(images):
             pdf.add_page()
@@ -111,9 +133,12 @@ def main(argv):
     m_lat = 10
     
     # Calcolo migliore configurazione griglia
-    if C == -1 or R == -1:
-        print("Calcolo miglior disposizione griglia...")
-        N = len(images)
+    N = len(images)
+    if C == -1 and R != -1:
+        C = np.ceil(N/R)
+    elif R == -1 and C != -1:
+        R = np.ceil(N/C)
+    elif C == -1 or R == -1:
         possibili_colonne = np.arange(N*1.)+1
         possibili_righe = np.ceil(N/possibili_colonne)
         possibili_aree_immagini_a_guida_colonne = ((W-2*m_lat)/possibili_colonne)**2*(2/3)
@@ -128,8 +153,7 @@ def main(argv):
         max_to_min_sort_index = np.argsort(aree_risultanti)[::-1]
         print(possibili_righe[max_to_min_sort_index][:4])
         print(possibili_colonne[max_to_min_sort_index][:4])
-        print(aree_risultanti[max_to_min_sort_index][:4])
-        
+        print(aree_risultanti[max_to_min_sort_index][:4])     
     
     # Creazione pagina
     pdf.add_page()
